@@ -4,14 +4,36 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/strings/slices"
 	"log"
 	"net/http"
+	"os"
 	"sigs.k8s.io/yaml"
+	"strings"
 	"text/template"
 	"webapp/globalvar"
 )
 
+var (
+	slCrNotAllowed = []string{}
+)
+
+// GetCrb execute after press button "Get Cluster Role Binding"
 func GetCrb(w http.ResponseWriter, r *http.Request) {
+
+	// read file with cluster role bindings which should hide
+	data, err := os.ReadFile("/files/clusterroles")
+	if err != nil {
+		log.Printf("Error message: %s", err)
+		log.Println("Can't read file ")
+
+	}
+	// convert bytes to string
+	dataString := string(data)
+
+	// split string and put it to slice
+	slCrNotAllowed = strings.Split(dataString, "\n")
+
 	// ---------------------------------------------------------------------------------------------------------
 	// collect data to slice and map
 	log.Println("Func GetCrb started")
@@ -28,10 +50,12 @@ func GetCrb(w http.ResponseWriter, r *http.Request) {
 	mapTemp := map[string][]string{}
 	// iterate over items to get name for cluster role binding and linked cluster role
 	for _, el := range listCRB.Items {
-
-		sl1 = append(sl1, "<b>"+el.Name+"</b>"+" "+el.RoleRef.Name)
-		mapTemp["List"] = sl1
-
+		if slices.Contains(slCrNotAllowed, el.RoleRef.Name) {
+			log.Println("Not allowed to show ")
+		} else {
+			sl1 = append(sl1, "<b>"+el.Name+"</b>"+" "+el.RoleRef.Name)
+			mapTemp["List"] = sl1
+		}
 	}
 	// logging
 	log.Println("Iteration over cluster role bindings finished")

@@ -14,7 +14,7 @@ func CrbShow(w http.ResponseWriter, r *http.Request) {
 	Msg := struct {
 		Message string
 	}{
-		Message: parsepost.Crbname,
+		Message: parsepost.Crbname, //show created cluster role binding
 	}
 	// send string to web page
 	err := t.Execute(w, Msg)

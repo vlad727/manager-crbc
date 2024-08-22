@@ -1,13 +1,16 @@
 package parsepost
 
 import (
+	"encoding/json"
 	"golang.org/x/net/context"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"log"
 	"net/http"
 	"strings"
 	"webapp/globalvar"
+	"webapp/jwtdecode"
 )
 
 var (
@@ -17,6 +20,18 @@ var (
 	Crbname  = "" // cluster role binding name concatenate sa + ns + cl ( var for logging to get result name for crb)
 	ErrorMsg = "" // Message for page errormsg (if crb already exist or smt else)
 )
+
+// struct for json
+type mainstruct struct {
+	Metadata Annotations `json:"metadata"`
+}
+
+type Annotations struct {
+	Annotations Requester `json:"annotations"`
+}
+type Requester struct {
+	Requester string `json:"requester"`
+}
 
 func bindingSubjects(saName, namespace string) []rbacv1.Subject {
 	return []rbacv1.Subject{
@@ -68,11 +83,11 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		//log.Println(index, el)
 		switch index {
 		case 0:
-			sa = el
-			log.Printf("The service account is %s", sa)
-		case 1:
 			ns = el
 			log.Printf("The namespace is %s", ns)
+		case 1:
+			sa = el
+			log.Printf("The service account is %s", sa)
 		case 2:
 			cr = el
 			log.Printf("The cluster role is %s", cr)
@@ -108,5 +123,27 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/crbshow", http.StatusSeeOther)
 
 		log.Printf("Cluster role binding %s has been created...", Crbname)
+
+		// set annotation
+		// validate.bac example: crb-requester: <ldap-user>
+		setAnnotation := mainstruct{
+			Metadata: Annotations{
+				Requester{jwtdecode.LoggedUser},
+			},
+		}
+
+		// marshal var setAnnotation to json
+		bytes, _ := json.Marshal(setAnnotation)
+
+		// set validate.bac to cluster role binding
+		//Note: that type used MergePatchType (allow add new piece of json)
+		_, err = globalvar.Clientset.RbacV1().ClusterRoleBindings().Patch(context.TODO(), Crbname, types.MergePatchType, bytes, v1.PatchOptions{})
+		if err != nil {
+			log.Printf("Failed to set validate.bac for %s", Crbname)
+			log.Println(err)
+		} else {
+			log.Println("Cluster role binding has been annotated", string(bytes))
+		}
+
 	}
 }

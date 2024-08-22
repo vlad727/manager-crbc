@@ -17,7 +17,7 @@
 <div class="container mt-5">
   <div class="row">
     <div class="col-8">
-      <h4>Choose Service Account and Cluster Role</h4>
+      <h4>Please select service account and cluster role</h4>
     </div>
   </div>
 </div>
@@ -26,9 +26,9 @@
     <div class="col-10">
       <form action="/createcrbmanager" method="post">
         <select name="choice1" style="font-size:15pt;height:40px;width:410px;" required>
-          <option value="">Service Account</option>
-          {{range $key, $value := .SaMap}}<option>
-          {{ $key }} {{ $value }}
+          <option value="">Namespace and Service Account</option>
+          {{range .SaMap}}<option>
+          {{ . }}
           {{end}}
         </option>
         </select>

@@ -1,11 +1,9 @@
 package main
 
 import (
-	"flag"
 	"log"
 	"net/http"
-	"webapp/annotation"
-	"webapp/chechealth"
+	"webapp/checkhealth"
 	"webapp/crbcmain"
 	"webapp/crbshow"
 	errormsg "webapp/error"
@@ -17,8 +15,8 @@ import (
 )
 
 const (
-	porthttp  = ":8080"
-	porthttps = ":8443"
+	porthttp = ":8080"
+	//	porthttps = ":8443" webhook won't use with this application
 )
 
 var (
@@ -38,8 +36,9 @@ func main() {
 	http.HandleFunc("/crbshow", crbshow.CrbShow)                     // show result after creating cluster role binding
 	http.HandleFunc("/error", errormsg.ErrorOut)                     // show page with error
 	http.HandleFunc("/getcrdesc", getcrdesc.GetCrDesc)               // it get post request parse and redirect to page with result
-	http.HandleFunc("/health", chechealth.Health)                    // allow check health for application
+	http.HandleFunc("/health", checkhealth.Health)                   // allow check health for application
 
+	/* webhook won't use with this application
 	// goroutine for webhook part port 8443
 	// need to run it in goroutine because http.ListenAndServe can't listen on two ports at the same time
 	go func() {
@@ -50,10 +49,12 @@ func main() {
 		flag.StringVar(&tlskey, "tlsKeyFile", "/certs/tls.key",
 			"File containing a private key for HTTPS.")
 		flag.Parse()
-		// func validate in package webhook
-		http.HandleFunc("/validate", annotation.Validate)
+		// func validate.bac in package webhook
+		http.HandleFunc("/validate.bac", validate.bac.Validate)
 		log.Fatal(http.ListenAndServeTLS(porthttps, tlscert, tlskey, nil))
 	}()
+
+	*/
 	// listen http
 	http.ListenAndServe(porthttp, nil)
 
