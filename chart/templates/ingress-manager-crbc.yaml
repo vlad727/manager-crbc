@@ -1,0 +1,26 @@
+{{ if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: {{ .Values.ingress.className }}
+    cert-manager.io/cluster-issuer: cluster-ca
+  name: {{ .Values.ingress.name }}
+  namespace: {{ .Values.namespace.name }}
+spec:
+  rules:
+  - host: {{ .Values.fqdn.ingressname }}
+    http:
+      paths:
+      - backend:
+          service:
+            name: {{ .Values.service.name }}
+            port:
+              name: http-oauth2
+        path: /
+        pathType: Prefix
+  tls:
+  - hosts:
+      - {{ .Values.fqdn.ingressname }}
+    secretName: manager-crbc-ingress-tls
+  {{- end }}

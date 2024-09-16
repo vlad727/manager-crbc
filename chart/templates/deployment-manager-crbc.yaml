@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: manager-crbc
+  name: manager-crbc
+  namespace: {{ .Values.namespace.name }}
+spec:
+  selector:
+    matchLabels:
+      app: manager-crbc
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: manager-crbc
+    spec:
+      containers:
+      - name: oauth2-proxy
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        image: >-
+          {{ .Values.imageoauth2proxy.repository }}:{{ .Values.imageoauth2proxy.tag }}
+        args:
+          - --client-id=oauth2-proxy
+          - --client-secret=<your-secret>
+          - --oidc-issuer-url=https://{{ .Values.fqdn.dexingress }}
+          - --cookie-secret=<your-seret>
+          - --ssl-insecure-skip-verify=true
+          - --upstream=http://127.0.0.1:8080
+          - --ssl-upstream-insecure-skip-verify=true
+          - --http-address=0.0.0.0:4180
+          - --redirect-url=https://{{ .Values.fqdn.ingressname }}/oauth2/callback
+          - --whitelist-domain={{ .Values.fqdn.ingressname }}/
+          - --scope=openid profile email groups
+          - --pass-access-token=true
+          - --code-challenge-method=S256
+          - --pass-authorization-header=true
+          - --pass-user-headers=true
+          - --set-xauthrequest=true
+          - --cookie-csrf-expire=300h30m0s
+          - --cookie-domain={{ .Values.fqdn.cookiedomain }}
+          - --cookie-expire=300h30m0s
+          - --cookie-httponly=false
+          - --cookie-refresh=1m
+          - --cookie-samesite=none
+          - --cookie-secure=true
+          - --provider=oidc
+          - --provider-display-name="LDAP"
+          - --reverse-proxy=false
+          - --set-xauthrequest=true
+          - --skip-jwt-bearer-tokens=false
+          - --email-domain=*
+        ports:
+        - containerPort: 4180
+          name: http-oauth2
+        resources:
+          limits:
+            cpu: 100m
+            memory: 100Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+      - image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        name: {{ .Values.image.name }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8443
+          name: https
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: files
+          mountPath: /files
+          readOnly: true
+      volumes:
+      - name: files
+        configMap:
+          name: templates
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master

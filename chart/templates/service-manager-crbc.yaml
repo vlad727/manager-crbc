@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: manager-crbc
+  name: {{ .Values.service.name }}
+  namespace: {{ .Values.namespace.name }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 4180
+      name: http-oauth2
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+      name: http
+    - port: 8443
+      protocol: TCP
+      targetPort: 8443
+      name: https
+  selector:
+    app: manager-crbc
