@@ -57,6 +57,15 @@ Changed _gen_certs.sh
 For generate certs use command ./_gen_certs.sh  <namespacename> <servicename>
 manager-ns-webhook-tls add namespace
 
+## [v0.1.5 2024-09-13]
+### Added
+Created ApplicationSet AppProject for Argo-CD
+Deleted secrets and added annotation cert-manager.io/cluster-issuer: cluster-ca for generate secrets
+### Changed
+-----
+
+
+
 
 
 

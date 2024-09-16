@@ -29,9 +29,9 @@ func main() {
 	log.Printf("Port %s listening", porthttp)
 	log.Println("Func main started")
 	http.HandleFunc("/", home.HomeFunc)                              // home page with buttons main page for application
-	http.HandleFunc("/getcrb", getcrb.GetCrb)                        // allow to get cluster role binding as a list
-	http.HandleFunc("/getsa", getsa.GetSa)                           // allow to get service accounts and their namespaces
-	http.HandleFunc("/crbcmain", crbcmain.CrbcMain)                  // generate page with fields allow to choose service account ns and cluster role
+	http.HandleFunc("/getcrb", getcrb.GetCrb)                        // allow getting cluster role binding as a list
+	http.HandleFunc("/getsa", getsa.GetSa)                           // allow getting service accounts and their namespaces
+	http.HandleFunc("/crbcmain", crbcmain.CrbcMain)                  // generate page with fields allow choosing service account ns and cluster role
 	http.HandleFunc("/createcrbmanager", parsepost.ParsePostRequest) // parse input from user service account + namespace + cluster role + crbc
 	http.HandleFunc("/crbshow", crbshow.CrbShow)                     // show result after creating cluster role binding
 	http.HandleFunc("/error", errormsg.ErrorOut)                     // show page with error
