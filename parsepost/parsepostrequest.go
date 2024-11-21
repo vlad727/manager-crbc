@@ -19,6 +19,7 @@ var (
 	cr       = "" // cluster role (requested cluster role which one chose by user)
 	Crbname  = "" // cluster role binding name concatenate sa + ns + cl ( var for logging to get result name for crb)
 	ErrorMsg = "" // Message for page errormsg (if crb already exist or smt else)
+	Checkbox = ""
 )
 
 // struct for json
@@ -34,14 +35,27 @@ type Requester struct {
 }
 
 func bindingSubjects(saName, namespace string) []rbacv1.Subject {
-	return []rbacv1.Subject{
-		{
-			Kind:      rbacv1.ServiceAccountKind,
-			Name:      saName,
-			Namespace: namespace,
-		},
+
+	if Checkbox != "" {
+		return []rbacv1.Subject{
+			{
+				Kind:      rbacv1.UserKind,
+				Name:      saName,
+				Namespace: namespace,
+			},
+		}
+	} else {
+		return []rbacv1.Subject{
+			{
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      saName,
+				Namespace: namespace,
+			},
+		}
 	}
+
 }
+
 func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 
 	// ----------------------------------------------------------------------------------------------------------------------------
@@ -62,19 +76,26 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		//fmt.Println("Value: ", strings.Join(v, " "))
 		log.Println(v)
 
-		// split string in slice
-		for _, el := range v {
-			if strings.Contains(el, " ") {
-				substrs := strings.Split(el, " ")
-				for _, element := range substrs {
-					sl = append(sl, element)
+		// check checkbox
+		if k == "CrbLikeUser" {
+			log.Println("Need to set \"- kind: User\"")
+			Checkbox = "True"
+
+		}
+		if k == "choice1" {
+			// split string in slice
+			for _, el := range v {
+				if strings.Contains(el, " ") {
+					substrs := strings.Split(el, " ")
+					for _, element := range substrs {
+						sl = append(sl, element)
+					}
+				} else {
+					sl = append(sl, el)
 				}
-			} else {
-				sl = append(sl, el)
 			}
 		}
 	}
-
 	// ----------------------------------------------------------------------------------------------------------------------------
 	// create cluster role binding logging input
 
@@ -85,15 +106,20 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		case 0:
 			ns = el
 			log.Printf("The namespace is %s", ns)
+			// Using the ReplaceAll Function
+			resultDelColon := strings.ReplaceAll(ns, ":", "")
+			ns = resultDelColon
 		case 1:
 			sa = el
 			log.Printf("The service account is %s", sa)
 		case 2:
 			cr = el
 			log.Printf("The cluster role is %s", cr)
+
 		}
 	}
-	// init var cluster role binding for clientset before
+
+	// init var cluster role binding for service account
 	binding := &rbacv1.ClusterRoleBinding{
 		ObjectMeta: v1.ObjectMeta{
 			Name: sa + "-" + ns + "-" + cr + "-" + "crbc",
@@ -135,7 +161,6 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		// marshal var setAnnotation to json
 		bytes, _ := json.Marshal(setAnnotation)
 
-		// set validate.bac to cluster role binding
 		//Note: that type used MergePatchType (allow add new piece of json)
 		_, err = globalvar.Clientset.RbacV1().ClusterRoleBindings().Patch(context.TODO(), Crbname, types.MergePatchType, bytes, v1.PatchOptions{})
 		if err != nil {

@@ -47,8 +47,8 @@ func GetSa(w http.ResponseWriter, r *http.Request) {
 	// data from jwt decode
 	//log.Println("Got it from JWT decode: %s", jwtdecode.UserMap)
 
-	// iterate over map to assign data to new vars
-	for k, v := range jwtdecode.UserMap { // vars comes from jwtdecode func
+	// iterate over map to assign data to new clientgo.bac
+	for k, v := range jwtdecode.UserMap { // clientgo.bac comes from jwtdecode func
 		UserName = k
 		Groups = v
 	}
@@ -113,9 +113,11 @@ func GetSa(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles("tmpl/getsa.html")
 	// init struct and var
 	Msg := struct {
-		Message string `yaml:"message"`
+		Message           string `yaml:"message"`
+		MessageLoggedUser string
 	}{
-		Message: str,
+		Message:           str,
+		MessageLoggedUser: jwtdecode.LoggedUser,
 	}
 	// execute
 	err = t.Execute(w, Msg)

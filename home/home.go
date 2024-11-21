@@ -47,7 +47,7 @@ func HomeFunc(w http.ResponseWriter, r *http.Request) {
 	log.Println("Func HomeFunc started")
 
 	// parse html
-	t, _ := template.ParseFiles("tmpl/home.html")
+	t, _ := template.ParseFiles("tmpl/getresp.html")
 
 	// create and init struct
 	Marketing := struct {

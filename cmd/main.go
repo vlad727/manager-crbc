@@ -3,9 +3,11 @@ package main
 import (
 	"log"
 	"net/http"
-	"webapp/checkhealth"
+	"time"
 	"webapp/crbcmain"
 	"webapp/crbshow"
+	"webapp/crmatcher/getcrname"
+	"webapp/crmatcher/handlers"
 	errormsg "webapp/error"
 	"webapp/getcrb"
 	"webapp/getcrdesc"
@@ -24,10 +26,19 @@ var (
 )
 
 func main() {
+
+	// // Code to measure
+	start := time.Now()
+
+	getcrname.CrAllowedList() // func which one count len for items all allowed cluster roles
+
+	// logging
 	log.Println("Hello my dear friend")
 	log.Println("I see you like to press buttons")
 	log.Printf("Port %s listening", porthttp)
 	log.Println("Func main started")
+
+	// All handlers for get/post requests
 	http.HandleFunc("/", home.HomeFunc)                              // home page with buttons main page for application
 	http.HandleFunc("/getcrb", getcrb.GetCrb)                        // allow getting cluster role binding as a list
 	http.HandleFunc("/getsa", getsa.GetSa)                           // allow getting service accounts and their namespaces
@@ -36,8 +47,10 @@ func main() {
 	http.HandleFunc("/crbshow", crbshow.CrbShow)                     // show result after creating cluster role binding
 	http.HandleFunc("/error", errormsg.ErrorOut)                     // show page with error
 	http.HandleFunc("/getcrdesc", getcrdesc.GetCrDesc)               // it get post request parse and redirect to page with result
-	http.HandleFunc("/health", checkhealth.Health)                   // allow check health for application
-
+	http.HandleFunc("/uploadfile", handlers.UploadFile)              // crmatcher -> handlers ->  handlerpost.go upload file
+	http.HandleFunc("/uploadedfile", handlers.HandlePost)            // already uploaded file send to parse data from file
+	http.HandleFunc("/crmatcherresult", handlers.CrMatcherResult)    // crmatcherresult -> handlers ->  handlerresult.go show page with result checking cluster roles
+	//http.HandleFunc("/health", checkhealth.Health)                   // allow check health for application
 	/* webhook won't use with this application
 	// goroutine for webhook part port 8443
 	// need to run it in goroutine because http.ListenAndServe can't listen on two ports at the same time
@@ -55,6 +68,11 @@ func main() {
 	}()
 
 	*/
+
+	// Code to measure
+	duration := time.Since(start)
+	log.Printf("Time execution for Func main  %s", duration)
+
 	// listen http
 	http.ListenAndServe(porthttp, nil)
 

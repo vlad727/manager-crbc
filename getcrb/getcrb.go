@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 	"webapp/globalvar"
+	"webapp/jwtdecode"
 )
 
 var (
@@ -74,9 +75,11 @@ func GetCrb(w http.ResponseWriter, r *http.Request) {
 
 	// init struct
 	Msg := struct {
-		Message string `yaml:"message"`
+		Message           string `yaml:"message"`
+		MessageLoggedUser string
 	}{
-		Message: str,
+		Message:           str,
+		MessageLoggedUser: jwtdecode.LoggedUser,
 	}
 	// send string to web page execute
 	err = t.Execute(w, Msg)

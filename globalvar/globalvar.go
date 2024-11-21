@@ -16,7 +16,7 @@ var (
 		config, _ = rest.InClusterConfig()
 
 		// creates the clientset
-		clientset, _ = kubernetes.NewForConfig(config)
+		clientset, _ = getcrname.NewForConfig(config)
 
 	*/
 )

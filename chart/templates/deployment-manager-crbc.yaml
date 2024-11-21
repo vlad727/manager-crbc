@@ -22,9 +22,9 @@ spec:
           {{ .Values.imageoauth2proxy.repository }}:{{ .Values.imageoauth2proxy.tag }}
         args:
           - --client-id=oauth2-proxy
-          - --client-secret=<your-secret>
+          - --client-secret=hlW2pGGraHDuMAZ4qFEKg2fUHHxr8acDEgDEcIg7RX0U7A9
           - --oidc-issuer-url=https://{{ .Values.fqdn.dexingress }}
-          - --cookie-secret=<your-seret>
+          - --cookie-secret=VXNSZ1FqMXFId2YwWWt3UlVTUjFXQT09
           - --ssl-insecure-skip-verify=true
           - --upstream=http://127.0.0.1:8080
           - --ssl-upstream-insecure-skip-verify=true

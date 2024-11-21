@@ -1,21 +1,21 @@
-# Default values for ns-manager.
+# Default values for chart.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 fqdn:
-  ingressname: manager-crbc.apps.k8s.app-test.<your-fqdn>
-  dexingress: dex.apps.k8s.app-test.<your-fqdn>
-  cookiedomain: apps.k8s.app-test.<your-fqdn>
+  ingressname: manager-crbc.apps.k8s.app-test.solution.sbt
+  dexingress: dex.apps.k8s.app-test.solution.sbt
+  cookiedomain: apps.k8s.app-test.solution.sbt
 
 replicaCount: 1
 
 image:
-  repository: registry.apps.k8s.<your-fqdn>.<your-fqdn>/r4c-development/manager-crbc  
+  repository: registry.apps.k8s.ose-prod.solution.sbt/r4c-development/manager-crbc  
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.1.4"
   name: "manager-crbc"
 imageoauth2proxy:
-  repository: registry.apps.k8s.<your-fqdn>.<your-fqdn>/oauth2-proxy/oauth2-proxy
+  repository: registry.apps.k8s.ose-prod.solution.sbt/oauth2-proxy/oauth2-proxy
   tag: v7.4.0
 imagePullSecrets: []
 nameOverride: ""
@@ -60,10 +60,10 @@ ingress:
   enabled: true
   className: "nginx"
   annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
+    # getcrname.io/ingress.class: nginx
+    # getcrname.io/tls-acme: "true"
   hosts:
-    - host: manager-crbc.apps.k8s.app-test.<your-fqdn>
+    - host: manager-crbc.apps.k8s.app-test.solution.sbt
       paths:
         - path: /
           pathType: ImplementationSpecific

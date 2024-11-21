@@ -8,17 +8,18 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"text/template"
+	"webapp/counter"
 	"webapp/globalvar"
 	"webapp/jwtdecode"
 	"webapp/readfiles"
 )
 
 type DataStruct struct {
-	TestData []string
-	CrbSlice []string
-	SaMap    []string
+	CrbSlice          []string
+	SaMap             []string
+	MessageLoggedUser string
+	NumberOfEntities  int
 }
 
 var (
@@ -39,6 +40,8 @@ var (
 
 func CrbcMain(w http.ResponseWriter, r *http.Request) {
 
+	counter.Counter() // func Counter collect and count all cluster role bindings which one has substring "crbc"
+
 	// Run func for ReadFile to get value from config file
 	UserAdmin = readfiles.ReadFile()
 
@@ -47,8 +50,8 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 	// data from jwt decode
 	log.Println("Got it from JWT decode: %s", jwtdecode.UserMap)
 
-	// iterate over map to assign data to new vars
-	for k, v := range jwtdecode.UserMap { // vars comes from jwtdecode func
+	// iterate over map to assign data to new clientgo.bac
+	for k, v := range jwtdecode.UserMap { // clientgo.bac comes from jwtdecode func
 		UserName = k
 		Groups = v
 	}
@@ -92,7 +95,7 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 
 		//m := map[string][]string{}
 		for _, el := range listSa.Items {
-			s := fmt.Sprint(el.Namespace + " " + el.Name)
+			s := fmt.Sprint(el.Namespace + ":" + " " + el.Name)
 			sliceSaName = append(sliceSaName, s)
 		}
 	}
@@ -100,10 +103,10 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 	//---------------------------------------------------------------------------------------------------------------------------------
 	// Cluster Roles part
 	//---------------------------------------------------------------------------------------------------------------------------------
-	slCrNotAllowed := []string{}
+	//slCrNotAllowed := []string{}
 
 	// read file with cluster roles which one should hide
-	data, err := os.ReadFile("/files/clusterroles")
+	data, err := os.ReadFile("/files/allowedlabel")
 	if err != nil {
 		log.Printf("Error message: %s", err)
 		log.Println("Can't read file ")
@@ -113,42 +116,32 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 	dataString := string(data)
 
 	// split string and put it to slice
-	slCrNotAllowed = strings.Split(dataString, "\n")
+	//slCrNotAllowed = strings.Split(dataString, "\n")
 
 	// logging slice to know what we got
 	//log.Println(slCrNotAllowed)
 
 	// list cluster role binding
-	listCR, err := globalvar.Clientset.RbacV1().ClusterRoles().List(context.Background(), v1.ListOptions{})
+	listCR, err := globalvar.Clientset.RbacV1().ClusterRoles().List(context.Background(), v1.ListOptions{LabelSelector: dataString})
 	if err != nil {
 		log.Println(err)
 	}
 	// iterate over items to get name for cluster role binding and linked cluster role
 	for _, el := range listCR.Items {
 
-		// check cluster role does it present in forbidden list
-		if slices.Contains(slCrNotAllowed, el.Name) {
-			log.Printf("Cluster Role %s should hide", el.Name)
-		} else {
-			// Logging Cluster Roles
-			//log.Printf(" ClusterRole: %s ", el.Name)
-			sliceCrAllowed = append(sliceCrAllowed, el.Name)
-		}
+		sliceCrAllowed = append(sliceCrAllowed, el.Name)
 
 	}
 	// logging cluster roles
 	log.Println("Slice cluster roles requested and collected")
 
 	//---------------------------------------------------------------------------------------------------------------------------------
-	// vars to struct
+	// clientgo.bac to struct
 	DataProvider := DataStruct{
-
-		TestData: []string{ // for test
-			"Extra Priority",
-			"Normal",
-			"Low Priority"},
-		CrbSlice: sliceCrAllowed, // output slice
-		SaMap:    sliceSaName,    // output map
+		CrbSlice:          sliceCrAllowed,           // output slice
+		SaMap:             sliceSaName,              // output map
+		MessageLoggedUser: jwtdecode.LoggedUser,     // logged user
+		NumberOfEntities:  counter.NumberOfEntities, // number of cluster role bindings created via manager-crbc
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -166,4 +159,6 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 	AllowedNsSlice = nil
 	sliceCrAllowed = nil
 
+	log.Println("Clear slice CreatedByCrbc")
+	counter.CreatedByCrbc = nil // set number of "crbc" cluster role to 0, to avoid
 }

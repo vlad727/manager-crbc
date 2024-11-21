@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/yaml"
 	"text/template"
 	"webapp/globalvar"
+	"webapp/jwtdecode"
 )
 
 var (
@@ -163,11 +164,13 @@ func GetCrDesc(w http.ResponseWriter, r *http.Request) {
 
 	// init struct with var
 	Msg := struct {
-		ClusterRoleName string
-		Items           string `yaml:"out"`
+		ClusterRoleName   string
+		Items             string `yaml:"out"`
+		MessageLoggedUser string
 	}{
-		ClusterRoleName: ClusterRoleName,
-		Items:           s,
+		ClusterRoleName:   ClusterRoleName,
+		Items:             s,
+		MessageLoggedUser: jwtdecode.LoggedUser,
 	}
 
 	// parse html

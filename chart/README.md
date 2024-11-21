@@ -11,12 +11,12 @@ docker build -t manager-crbc.
 # Install helm before
 brew install helm 
 # Clone this project and install by helm
-helm repo add postinstall https://registry.apps.k8s.<your-fqdn>.<your-fqdn>/chartrepo/postinstall --username LOGIN --password TOKEN
+helm repo add postinstall https://registry.apps.k8s.ose-prod.solution.sbt/chartrepo/postinstall --username LOGIN --password TOKEN
 helm pull postinstall/manager-crbc --untar
 helm install crbc chart/ 
 
 # Check installation result
 kubectl get pods -n manager-crbc
-open ingress https://manager-crbc.apps.<your-cluster--fqdn>>.<your-fqdn>/
+open ingress https://manager-crbc.apps.<your-cluster--fqdn>>.solution.sbt/
 create cluster role binding via web
 ```
