@@ -9,7 +9,7 @@ import (
 	crcheck "webapp/crmatcher"
 	"webapp/crmatcher/getcrname"
 	"webapp/crmatcher/readfile/readyamlfile"
-	"webapp/jwtdecode"
+	"webapp/home/loggeduser"
 )
 
 var (
@@ -17,6 +17,15 @@ var (
 )
 
 func CrMatcherResult(w http.ResponseWriter, r *http.Request) {
+
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
+
+	var LoggedUser string // username for logged user
+	for k, v := range UserAndGroups {
+		k = LoggedUser
+		log.Println(k, v)
+	}
 
 	// send dst dir to read file
 	readyamlfile.ReadFileYaml(DstDirName)
@@ -47,7 +56,7 @@ func CrMatcherResult(w http.ResponseWriter, r *http.Request) {
 		MessageLoggedUser string
 		MessageResult     string
 	}{
-		MessageLoggedUser: jwtdecode.LoggedUser,
+		MessageLoggedUser: LoggedUser, //home.LoggedUser,
 		MessageResult:     ResultForCheck,
 	}
 	// send string to web page execute

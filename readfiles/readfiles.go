@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-var (
-	UserAdmin string
-)
-
 func ReadFile() string {
 
 	// logging readFile
@@ -21,6 +17,8 @@ func ReadFile() string {
 		log.Println("Can't read file ")
 
 	}
+	// declare variable
+	var UserAdmin = ""
 	// convert bytes to string
 	UserAdmin = string(data)
 	// logging

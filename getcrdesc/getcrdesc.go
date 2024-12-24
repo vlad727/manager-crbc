@@ -1,3 +1,5 @@
+// Package getcrdesc get request with cluster role name then parse it
+// iterate over it, and provide yaml to web page
 package getcrdesc
 
 import (
@@ -9,15 +11,17 @@ import (
 	"sigs.k8s.io/yaml"
 	"text/template"
 	"webapp/globalvar"
-	"webapp/jwtdecode"
-)
-
-var (
-	ClusterRoleName = ""
+	"webapp/home/loggeduser"
 )
 
 func GetCrDesc(w http.ResponseWriter, r *http.Request) {
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
 
+	var username string               // name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map
+		username = k
+	}
 	// parse post request
 	r.ParseForm() // Анализирует переданные параметры url, затем анализирует пакет ответа для тела POST (тела запроса)
 	// внимание: без вызова метода ParseForm последующие данные не будут получены
@@ -25,6 +29,7 @@ func GetCrDesc(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Form) // печатает информацию на сервере
 	log.Println("Path: ", r.URL.Path)
 
+	var ClusterRoleName string // cluster role name
 	// iterate over request with for to get requested cluster role name
 	for k, v := range r.Form {
 		log.Println("Key: ", k)
@@ -170,7 +175,7 @@ func GetCrDesc(w http.ResponseWriter, r *http.Request) {
 	}{
 		ClusterRoleName:   ClusterRoleName,
 		Items:             s,
-		MessageLoggedUser: jwtdecode.LoggedUser,
+		MessageLoggedUser: username,
 	}
 
 	// parse html

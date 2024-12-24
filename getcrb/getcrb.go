@@ -12,31 +12,35 @@ import (
 	"strings"
 	"text/template"
 	"webapp/globalvar"
-	"webapp/jwtdecode"
-)
-
-var (
-	slCrNotAllowed = []string{}
+	"webapp/home/loggeduser"
 )
 
 // GetCrb execute after press button "Get Cluster Role Binding"
 func GetCrb(w http.ResponseWriter, r *http.Request) {
 
-	// read file with cluster role bindings which should hide
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
+
+	var username string               // name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map
+		username = k
+	}
+
+	// ### Read file with cluster role bindings which should hide ###
 	data, err := os.ReadFile("/files/clusterroles")
 	if err != nil {
 		log.Printf("Error message: %s", err)
 		log.Println("Can't read file ")
 
 	}
-	// convert bytes to string
-	dataString := string(data)
 
-	// split string and put it to slice
-	slCrNotAllowed = strings.Split(dataString, "\n")
+	dataString := string(data) // convert bytes to string
 
-	// ---------------------------------------------------------------------------------------------------------
-	// collect data to slice and map
+	var slCrNotAllowed []string // clear slice
+
+	slCrNotAllowed = strings.Split(dataString, "\n") // split string and put it to slice
+
+	//  ### Collect data to slice and map ###
 	log.Println("Func GetCrb started")
 	// list cluster role binding
 	listCRB, err := globalvar.Clientset.RbacV1().ClusterRoleBindings().List(context.Background(), v1.ListOptions{})
@@ -52,7 +56,7 @@ func GetCrb(w http.ResponseWriter, r *http.Request) {
 	// iterate over items to get name for cluster role binding and linked cluster role
 	for _, el := range listCRB.Items {
 		if slices.Contains(slCrNotAllowed, el.RoleRef.Name) {
-			log.Println("Not allowed to show ")
+			//log.Println("Not allowed to show ")
 		} else {
 			sl1 = append(sl1, "<b>"+el.Name+"</b>"+" "+el.RoleRef.Name)
 			mapTemp["List"] = sl1
@@ -79,7 +83,7 @@ func GetCrb(w http.ResponseWriter, r *http.Request) {
 		MessageLoggedUser string
 	}{
 		Message:           str,
-		MessageLoggedUser: jwtdecode.LoggedUser,
+		MessageLoggedUser: username,
 	}
 	// send string to web page execute
 	err = t.Execute(w, Msg)

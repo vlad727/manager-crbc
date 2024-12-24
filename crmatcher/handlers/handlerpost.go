@@ -6,10 +6,18 @@ import (
 	"net/http"
 	"text/template"
 	"time"
-	"webapp/jwtdecode"
+	"webapp/home/loggeduser"
 )
 
 func UploadFile(w http.ResponseWriter, r *http.Request) {
+
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
+
+	var username string               // name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map
+		username = k
+	}
 	// execution time
 	start := time.Now()
 	//logging
@@ -21,7 +29,7 @@ func UploadFile(w http.ResponseWriter, r *http.Request) {
 	Msg := struct {
 		MessageLoggedUser string
 	}{
-		MessageLoggedUser: jwtdecode.LoggedUser,
+		MessageLoggedUser: username, //home.LoggedUser,
 	}
 	// send string to web page execute
 	err := t.Execute(w, Msg)

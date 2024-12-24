@@ -2,23 +2,23 @@ package parsepost
 
 import (
 	"encoding/json"
+	"fmt"
 	"golang.org/x/net/context"
 	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"webapp/globalvar"
-	"webapp/jwtdecode"
+	"webapp/home/loggeduser"
 )
 
 var (
-	sa       = "" // service account name
-	ns       = "" // namespace name (namespace where service account exist)
-	cr       = "" // cluster role (requested cluster role which one chose by user)
-	Crbname  = "" // cluster role binding name concatenate sa + ns + cl ( var for logging to get result name for crb)
-	ErrorMsg = "" // Message for page errormsg (if crb already exist or smt else)
+
+	//Crbname  = "" // cluster role binding name concatenate sa + ns + cl ( var for logging to get result name for crb) !!! depracated
+	//ErrorMsg = "" // Message for page errormsg (if crb already exist or smt else) !!! deprecated
 	Checkbox = ""
 )
 
@@ -58,11 +58,20 @@ func bindingSubjects(saName, namespace string) []rbacv1.Subject {
 
 func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 
-	// ----------------------------------------------------------------------------------------------------------------------------
-	// parse post request
+	var sa = "" // service account name
+	var ns = "" // namespace name (namespace where service account exist)
+	var cr = "" // cluster role (requested cluster role which one chose by user)
 
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
+
+	var username string               // name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map
+		username = k
+	}
 	// init empty slice
 	sl := []string{}
+
 	r.ParseForm() // Анализирует переданные параметры url, затем анализирует пакет ответа для тела POST (тела запроса)
 	// внимание: без вызова метода ParseForm последующие данные не будут получены
 	log.Printf("Full post request: %s", r)
@@ -96,9 +105,9 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
 	// ----------------------------------------------------------------------------------------------------------------------------
 	// create cluster role binding logging input
-
 	// sl it's slice with service account namespace and requested cluster role
 	for index, el := range sl {
 		//log.Println(index, el)
@@ -136,25 +145,34 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 	_, err := globalvar.Clientset.RbacV1().ClusterRoleBindings().Create(context.Background(), binding, v1.CreateOptions{})
 	if err != nil {
 		log.Println(err)
-		ErrorMsg = err.Error()
+		ErrorMsg := "Failed to create cluster role binding: " + err.Error()
+		url := fmt.Sprintf("/error?error=%s", url.QueryEscape(ErrorMsg)) // url path /error, key is error and value will be ErrorMsg
 		// redirect to failed creation page
 		// if crb already exist or smt goes wrong
-		http.Redirect(w, r, "/error", http.StatusSeeOther)
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		log.Printf("Show url string %s from packager parsepostrequest", url)
+
+		/* send error message through http.redirect instead global var
+		errorMessage := "Some error message"
+		 url := fmt.Sprintf("/error?error=%s", url.QueryEscape(errorMessage))
+		*/
 
 	} else {
 		// concatenate strings to crb name
-		Crbname = sa + "-" + ns + "-" + cr + "-" + "crbc"
+		Crbname := "Cluster Role Binding has been created: " + sa + "-" + ns + "-" + cr + "-" + "crbc"
 		// redirect to success creation page
 		// show page with crb name
-		http.Redirect(w, r, "/crbshow", http.StatusSeeOther)
 
+		url := fmt.Sprintf("/error?error=%s", url.QueryEscape(Crbname))
+		http.Redirect(w, r, url, http.StatusSeeOther)
+		log.Printf("Show url string %s from packager parsepostrequest", url)
 		log.Printf("Cluster role binding %s has been created...", Crbname)
 
 		// set annotation
-		// validate.bac example: crb-requester: <ldap-user>
+		// example: crb-requester: <ldap-user>
 		setAnnotation := mainstruct{
 			Metadata: Annotations{
-				Requester{jwtdecode.LoggedUser},
+				Requester{username},
 			},
 		}
 
@@ -171,4 +189,6 @@ func ParsePostRequest(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+
+	Checkbox = "" // set Checkbox to ""
 }

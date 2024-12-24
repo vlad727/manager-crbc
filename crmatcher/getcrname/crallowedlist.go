@@ -22,7 +22,7 @@ func CrAllowedList() {
 	// logging
 	log.Println("Func CrAllowedList started")
 
-	listAllCrs := GetCrNameList() // get all cluster roles from kubernetes API with client-go
+	listAllCrs := GetCrNameList() // get all cluster roles from kubernetes API with clientgo
 
 	listForbiddenCrs := readcrifile.ReadFileCrNames() // read file with allowed cluster roles
 	// iterate over slice with all cluster role names

@@ -1,67 +1,40 @@
 package home
 
 import (
-	"log"
 	"net/http"
 	"text/template"
-	"webapp/jwtdecode"
-	"webapp/trimmer"
+	"webapp/home/loggeduser"
 )
 
-var (
-	LoggedUser string
-)
-
-type MyCustomStruct struct {
-	AuthData map[string][]string
-}
-
+// HomeFunc the main page
 func HomeFunc(w http.ResponseWriter, r *http.Request) {
 
-	var Data MyCustomStruct
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
 
-	r.ParseForm() // Анализирует переданные параметры url, затем анализирует пакет ответа для тела POST (тела запроса)
-	// внимание: без вызова метода ParseForm последующие данные не будут получены
-	//log.Println(r.Header)
-	// Loop over header names
-	for name, values := range r.Header {
-
-		//log.Println(name, values)
-		if name == "Authorization" {
-			//log.Printf("Token with string \"Bearer\" need to trim %s", values)
-			Data = MyCustomStruct{
-				AuthData: map[string][]string{
-					"Authorization": values,
-				},
-			}
-
-		}
-
+	var username string               // empty var for name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map and skip groups
+		username = k
 	}
-	// send to extract token
-	jwtToken := trimmer.Trimmer(Data.AuthData)
-
-	// send token to decode
-	jwtdecode.JwtDecode(jwtToken)
-	// logging
-	log.Println("Func HomeFunc started")
-
 	// parse html
 	t, _ := template.ParseFiles("tmpl/getresp.html")
 
 	// create and init struct
-	Marketing := struct {
+	UserStruct := struct {
 		Message string
 	}{
-		Message: jwtdecode.LoggedUser, // get logged user name from jwt decode
+		Message: username, // set logged user login and put to html
 	}
 
-	err := t.Execute(w, Marketing)
+	err := t.Execute(w, UserStruct)
 	if err != nil {
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/octet-stream")
+
+	// set string with name to nil
+	username = ""
 
 }

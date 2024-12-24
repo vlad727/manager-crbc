@@ -5,6 +5,7 @@ package getlen
 import (
 	"golang.org/x/net/context"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/strings/slices"
 	"log"
 	"time"
 	"webapp/globalvar"
@@ -15,7 +16,8 @@ var (
 	CrNames       []string
 )
 
-func GetLen(x []string) map[string]int {
+func GetLen(y []string) map[string]int {
+
 	// execution time
 	log.Println("Func GetLen started")
 	start := time.Now()
@@ -23,34 +25,31 @@ func GetLen(x []string) map[string]int {
 	// <cluster role name>: <len for all their items>
 	M1 := make(map[string]int)
 
-	// iterate over slice with cluster role names
-	for _, crname := range x {
-
-		//log.Println("Func Clientk8s started ")
-		listCr, err := globalvar.Clientset.RbacV1().ClusterRoles().Get(context.TODO(), crname, v1.GetOptions{})
-		if err != nil {
-			log.Printf("Failed %s", listCr)
-			log.Println(err)
-		}
-		// iterate over cluster role rules
-		for _, el := range listCr.Rules {
-			// temporary slice for rules
-			tempslice := [][]string{el.APIGroups, el.ResourceNames, el.Resources, el.Verbs, el.NonResourceURLs}
-			// iterate over tempslice
-			for _, y := range tempslice {
-				// iterate over items for example APIGroups or ResourceNames then get sum of all len items
-				for _, z := range y {
-					LenForCrItems += len(z)
+	// ----------------------------------------------------------------------------------------------------------------
+	listCr, _ := globalvar.Clientset.RbacV1().ClusterRoles().List(context.TODO(), v1.ListOptions{})
+	//log.Println(listCr.Rules)
+	for _, x := range listCr.Items {
+		if slices.Contains(y, x.Name) {
+			// iterate over cluster role rules
+			for _, el := range x.Rules {
+				// temporary slice for rules
+				tempslice := [][]string{el.APIGroups, el.ResourceNames, el.Resources, el.Verbs, el.NonResourceURLs}
+				// iterate over tempslice
+				for _, y := range tempslice {
+					// iterate over items for example APIGroups or ResourceNames then get sum of all len items
+					for _, z := range y {
+						LenForCrItems += len(z)
+					}
 				}
-			}
 
+			}
+			M1[x.Name] = LenForCrItems
+			// set len to nil, need for the next cluster role items
+			LenForCrItems = 0
 		}
-		// put name cluster role and len for items to map
-		M1[listCr.Name] = LenForCrItems
-		// set len to nil, need for the next cluster role items
-		LenForCrItems = 0
 
 	}
+	log.Println(M1)
 
 	/*
 		// ##############################################################################################################

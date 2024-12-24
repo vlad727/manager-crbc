@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/strings/slices"
 	"log"
 	"net/http"
 	"os"
 	"text/template"
 	"webapp/counter"
+	"webapp/getsacollect"
 	"webapp/globalvar"
-	"webapp/jwtdecode"
-	"webapp/readfiles"
+	"webapp/home/loggeduser"
 )
 
 type DataStruct struct {
@@ -22,91 +21,35 @@ type DataStruct struct {
 	NumberOfEntities  int
 }
 
-var (
-	// AllowedNsSlice slice for allowed namespaces
-	AllowedNsSlice = []string{}
-
-	// temp string for name from RB Subject
-	strNameFromSub string
-
-	// var for data from jwtdecode
-	UserName string
-	Groups   []string
-
-	sliceSaName    []string
-	sliceCrAllowed []string
-	UserAdmin      string
-)
-
 func CrbcMain(w http.ResponseWriter, r *http.Request) {
 
-	counter.Counter() // func Counter collect and count all cluster role bindings which one has substring "crbc"
-
-	// Run func for ReadFile to get value from config file
-	UserAdmin = readfiles.ReadFile()
-
+	// logging
 	log.Println("Func CrbcMain started")
 
-	// data from jwt decode
-	log.Println("Got it from JWT decode: %s", jwtdecode.UserMap)
+	// send request to parse, trim and decode jwt, get map with user and groups
+	UserAndGroups := loggeduser.LoggedUserRun(r)
 
-	// iterate over map to assign data to new clientgo.bac
-	for k, v := range jwtdecode.UserMap { // clientgo.bac comes from jwtdecode func
-		UserName = k
-		Groups = v
+	var username string               // name of logged user
+	for k, _ := range UserAndGroups { // get logged user name from map
+		username = k
 	}
+	// func Counter collect and count all cluster role bindings which one has substring "crbc"
+	NumberOfEntities := counter.Counter()
 
-	// get list role-bindings in namespaces
-	listRB, err := globalvar.Clientset.RbacV1().RoleBindings("").List(context.TODO(), v1.ListOptions{})
-	if err != nil {
-		log.Printf("Failed %s", listRB)
-		log.Println(err)
-	}
-
-	// iterate over role-bindings
-	for _, el := range listRB.Items {
-		// iterate over Subjects to get name (also it contains: apiGroup, kind, namespace )
-		for _, x := range el.Subjects {
-			//log.Println(x.Name)
-			strNameFromSub = x.Name //May be group or username from ldap
-
-		}
-		// check condition: if clusterRole == admin and linked with user or group add namespace to allowed list
-		if el.RoleRef.Name == UserAdmin && strNameFromSub == UserName || slices.Contains(Groups, strNameFromSub) {
-			AllowedNsSlice = append(AllowedNsSlice, el.Namespace)
-		}
-
-	}
-	// logging to know which one namespace we got
-	//log.Printf("Allowed namespaces: %s", AllowedNsSlice)
-
-	//---------------------------------------------------------------------------------------------------------------------------------
-	// collect service accounts and their namespaces
-	// ---------------------------------------------------------------------------------------------------------------------
-	for _, y := range AllowedNsSlice {
-		listSa, err := globalvar.Clientset.CoreV1().ServiceAccounts(y).List(context.Background(), v1.ListOptions{})
-		if err != nil {
-			log.Println(err)
-			fmt.Fprintf(w, "Cluster is unavailable %s", err)
-
-		} else {
-			log.Println("Requested service account list from API")
-		}
-
-		//m := map[string][]string{}
-		for _, el := range listSa.Items {
-			s := fmt.Sprint(el.Namespace + ":" + " " + el.Name)
+	// Get Service Account and Namespaces for Select Element
+	var sliceSaName []string // slice for sa name
+	// why we use slice? Because we need to send it to html and add ":"
+	M1, Sl1 := getsacollect.GetSaCollect(UserAndGroups)
+	log.Println(M1) // got it from getsacollect func not used
+	for _, x := range Sl1 {
+		for k, v := range x {
+			s := fmt.Sprint(k + ":" + " " + v)
 			sliceSaName = append(sliceSaName, s)
 		}
 	}
 
-	//---------------------------------------------------------------------------------------------------------------------------------
-	// Cluster Roles part
-	//---------------------------------------------------------------------------------------------------------------------------------
-	//slCrNotAllowed := []string{}
-
-	// read file with cluster roles which one should hide
-	data, err := os.ReadFile("/files/allowedlabel")
+	// Cluster Roles for Select Element
+	data, err := os.ReadFile("/files/allowedlabel") // read file with allowed label
 	if err != nil {
 		log.Printf("Error message: %s", err)
 		log.Println("Can't read file ")
@@ -115,38 +58,29 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 	// convert bytes to string
 	dataString := string(data)
 
-	// split string and put it to slice
-	//slCrNotAllowed = strings.Split(dataString, "\n")
-
-	// logging slice to know what we got
-	//log.Println(slCrNotAllowed)
-
-	// list cluster role binding
+	// list cluster role binding only with allowed label
 	listCR, err := globalvar.Clientset.RbacV1().ClusterRoles().List(context.Background(), v1.ListOptions{LabelSelector: dataString})
 	if err != nil {
 		log.Println(err)
 	}
-	// iterate over items to get name for cluster role binding and linked cluster role
+	var sliceCrAllowed []string // temporary slice
+
+	// iterate over items to get name for cluster role binding
 	for _, el := range listCR.Items {
-
 		sliceCrAllowed = append(sliceCrAllowed, el.Name)
-
 	}
 	// logging cluster roles
 	log.Println("Slice cluster roles requested and collected")
 
-	//---------------------------------------------------------------------------------------------------------------------------------
-	// clientgo.bac to struct
+	// client-go to struct for output
 	DataProvider := DataStruct{
-		CrbSlice:          sliceCrAllowed,           // output slice
-		SaMap:             sliceSaName,              // output map
-		MessageLoggedUser: jwtdecode.LoggedUser,     // logged user
-		NumberOfEntities:  counter.NumberOfEntities, // number of cluster role bindings created via manager-crbc
+		CrbSlice:          sliceCrAllowed,   // output slice with cluster roles with allowed label
+		SaMap:             sliceSaName,      // output map example: my-sa:my-namespace
+		MessageLoggedUser: username,         // logged user string
+		NumberOfEntities:  NumberOfEntities, // number of cluster role bindings created via manager-crbc
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/octet-stream")
-
+	// parse template
 	t, _ := template.ParseFiles("tmpl/crbcmain.html")
 
 	err = t.Execute(w, DataProvider)
@@ -154,11 +88,13 @@ func CrbcMain(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set slice to nil
+	// set slice to nil to prevent overload
 	sliceSaName = nil
-	AllowedNsSlice = nil
 	sliceCrAllowed = nil
+	username = ""
 
-	log.Println("Clear slice CreatedByCrbc")
-	counter.CreatedByCrbc = nil // set number of "crbc" cluster role to 0, to avoid
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/octet-stream")
+	log.Println("End of crbcmain func...")
+
 }

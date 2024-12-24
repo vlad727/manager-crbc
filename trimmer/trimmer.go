@@ -1,3 +1,5 @@
+// Package trimmer is a package for trimming strings
+// Moved to loggeduser package
 package trimmer
 
 import (
